@@ -1,1 +1,439 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الحسن لتخزين</title>
 
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,Tahoma,sans-serif;
+  background:#f3f5f7;
+  color:#222;
+}
+header{
+  background:#198754;
+  color:white;
+  padding:18px 12px;
+  text-align:center;
+  font-size:25px;
+  font-weight:bold;
+}
+.container{
+  max-width:700px;
+  margin:auto;
+  padding:12px;
+}
+.card{
+  background:white;
+  border-radius:14px;
+  padding:15px;
+  margin-bottom:14px;
+  box-shadow:0 2px 8px #0001;
+}
+h2,h3{margin-top:0}
+input,select,button{
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:9px;
+  border:1px solid #ccc;
+  font-size:16px;
+}
+button{
+  border:0;
+  background:#198754;
+  color:white;
+  font-weight:bold;
+}
+button.red{background:#dc3545}
+button.blue{background:#0d6efd}
+button.gray{background:#6c757d}
+
+.result{
+  background:#eef8f2;
+  border-right:5px solid #198754;
+  padding:12px;
+  margin-top:8px;
+  border-radius:8px;
+}
+
+.container-title{
+  font-size:20px;
+  font-weight:bold;
+  color:#198754;
+  margin-bottom:10px;
+}
+
+.item{
+  border-top:1px solid #eee;
+  padding:10px 0;
+}
+
+.small{
+  color:#666;
+  font-size:14px;
+}
+
+.number{
+  font-size:20px;
+  font-weight:bold;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+@media(max-width:450px){
+  .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  📦 الحسن لتخزين
+</header>
+
+<div class="container">
+
+  <!-- البحث -->
+  <div class="card">
+    <h2>🔎 البحث عن المتبقي</h2>
+
+    <input
+      id="search"
+      type="text"
+      placeholder="اكتب اسم النوع للبحث..."
+      oninput="searchType()"
+    >
+
+    <div id="searchResults"></div>
+  </div>
+
+  <!-- إضافة كمية -->
+  <div class="card">
+    <h2>➕ إضافة كمية</h2>
+
+    <select id="addContainer"></select>
+
+    <select id="addType"></select>
+
+    <input
+      id="addQty"
+      type="number"
+      min="0"
+      step="0.01"
+      placeholder="الكمية"
+    >
+
+    <button onclick="addStock()">إضافة إلى الحاوية</button>
+  </div>
+
+  <!-- بيع / سحب -->
+  <div class="card">
+    <h2>📤 بيع أو سحب من الحاوية</h2>
+
+    <select id="saleContainer"></select>
+
+    <select id="saleType"></select>
+
+    <input
+      id="saleQty"
+      type="number"
+      min="0"
+      step="0.01"
+      placeholder="الكمية المباعة"
+    >
+
+    <button class="blue" onclick="sellStock()">تسجيل البيع</button>
+  </div>
+
+  <!-- عرض الحاويات -->
+  <div class="card">
+    <h2>📦 الحاويات</h2>
+    <div id="containers"></div>
+  </div>
+
+  <div class="card">
+    <button class="red" onclick="clearAll()">
+      ⚠️ مسح جميع البيانات
+    </button>
+  </div>
+
+</div>
+
+<script>
+
+const types = [
+  "كمبل 1.2 كغ",
+  "كمبل 1.1 كغ",
+  "دجاج 10 كغ",
+  "أفيل 2.5 كغ",
+  "نكت",
+  "بير zer",
+  "بمبتير 25 كغ",
+  "بصل 25 كغ",
+  "أفريت 2.5 كغ",
+  "أفريت 1 كغ"
+];
+
+const containerCount = 19;
+
+let stock = JSON.parse(localStorage.getItem("hassenStock")) || {};
+
+/* إنشاء الحاويات */
+for(let c=1;c<=containerCount;c++){
+  if(!stock[c]) stock[c] = {};
+  types.forEach(type=>{
+    if(stock[c][type] === undefined){
+      stock[c][type] = 0;
+    }
+  });
+}
+
+save();
+
+/* تعبئة القوائم */
+function fillSelects(){
+
+  const addContainer = document.getElementById("addContainer");
+  const saleContainer = document.getElementById("saleContainer");
+
+  addContainer.innerHTML="";
+  saleContainer.innerHTML="";
+
+  for(let c=1;c<=containerCount;c++){
+    addContainer.innerHTML +=
+      `<option value="${c}">الحاوية ${c}</option>`;
+
+    saleContainer.innerHTML +=
+      `<option value="${c}">الحاوية ${c}</option>`;
+  }
+
+  const addType = document.getElementById("addType");
+  const saleType = document.getElementById("saleType");
+
+  addType.innerHTML="";
+  saleType.innerHTML="";
+
+  types.forEach(type=>{
+    addType.innerHTML +=
+      `<option value="${type}">${type}</option>`;
+
+    saleType.innerHTML +=
+      `<option value="${type}">${type}</option>`;
+  });
+}
+
+/* حفظ البيانات */
+function save(){
+  localStorage.setItem("hassenStock",JSON.stringify(stock));
+}
+
+/* إضافة */
+function addStock(){
+
+  const c = document.getElementById("addContainer").value;
+  const type = document.getElementById("addType").value;
+  const qty = Number(document.getElementById("addQty").value);
+
+  if(!qty || qty<=0){
+    alert("اكتب كمية صحيحة");
+    return;
+  }
+
+  stock[c][type] += qty;
+
+  save();
+  document.getElementById("addQty").value="";
+
+  render();
+  searchType();
+
+  alert("تمت إضافة الكمية بنجاح ✅");
+}
+
+/* البيع */
+function sellStock(){
+
+  const c = document.getElementById("saleContainer").value;
+  const type = document.getElementById("saleType").value;
+  const qty = Number(document.getElementById("saleQty").value);
+
+  if(!qty || qty<=0){
+    alert("اكتب كمية صحيحة");
+    return;
+  }
+
+  if(qty > stock[c][type]){
+    alert(
+      "لا توجد كمية كافية في الحاوية " +
+      c +
+      "\nالمتبقي: " +
+      stock[c][type]
+    );
+    return;
+  }
+
+  stock[c][type] -= qty;
+
+  save();
+  document.getElementById("saleQty").value="";
+
+  render();
+  searchType();
+
+  alert("تم تسجيل البيع بنجاح ✅");
+}
+
+/* عرض الحاويات */
+function render(){
+
+  const box = document.getElementById("containers");
+  box.innerHTML="";
+
+  for(let c=1;c<=containerCount;c++){
+
+    let html = `
+      <div class="card">
+        <div class="container-title">
+          📦 الحاوية ${c}
+        </div>
+    `;
+
+    let hasStock = false;
+
+    types.forEach(type=>{
+
+      const qty = stock[c][type];
+
+      if(qty > 0){
+        hasStock = true;
+
+        html += `
+          <div class="item">
+            <b>${type}</b>
+            <br>
+            <span class="small">المتبقي:</span>
+            <span class="number">${formatNumber(qty)}</span>
+          </div>
+        `;
+      }
+
+    });
+
+    if(!hasStock){
+      html += `
+        <div class="small">
+          لا توجد كمية مسجلة في هذه الحاوية.
+        </div>
+      `;
+    }
+
+    html += `</div>`;
+
+    box.innerHTML += html;
+  }
+}
+
+/* البحث في جميع الحاويات */
+function searchType(){
+
+  const text =
+    document.getElementById("search").value
+    .trim()
+    .toLowerCase();
+
+  const result =
+    document.getElementById("searchResults");
+
+  if(!text){
+    result.innerHTML =
+      `<div class="small">اكتب اسم النوع لرؤية الكمية المتبقية في جميع الحاويات.</div>`;
+    return;
+  }
+
+  let total = 0;
+  let found = false;
+  let html = "";
+
+  for(let c=1;c<=containerCount;c++){
+
+    types.forEach(type=>{
+
+      if(type.toLowerCase().includes(text)){
+
+        const qty = stock[c][type];
+
+        if(qty > 0){
+
+          found = true;
+          total += qty;
+
+          html += `
+            <div class="result">
+              📦 الحاوية <b>${c}</b><br>
+              النوع: <b>${type}</b><br>
+              المتبقي: <strong>${formatNumber(qty)}</strong>
+            </div>
+          `;
+        }
+      }
+
+    });
+  }
+
+  if(found){
+
+    result.innerHTML = `
+      <div class="result">
+        <b>📊 إجمالي المتبقي في جميع الحاويات:</b>
+        <div class="number">${formatNumber(total)}</div>
+      </div>
+      ${html}
+    `;
+
+  }else{
+
+    result.innerHTML = `
+      <div class="result">
+        لا توجد كمية متبقية لهذا النوع.
+      </div>
+    `;
+  }
+}
+
+/* تنسيق الرقم */
+function formatNumber(num){
+
+  return Number(num).toLocaleString("ar-EG",{
+    maximumFractionDigits:2
+  });
+}
+
+/* مسح كل البيانات */
+function clearAll(){
+
+  const ok = confirm(
+    "هل أنت متأكد أنك تريد مسح جميع بيانات الحاويات؟"
+  );
+
+  if(!ok) return;
+
+  localStorage.removeItem("hassenStock");
+
+  location.reload();
+}
+
+/* تشغيل */
+fillSelects();
+render();
+searchType();
+
+</script>
